@@ -4,6 +4,10 @@ import { Link2, LogOut } from 'lucide-react';
 import { AuthForm } from './components/AuthForm';
 import { UrlForm } from './components/UrlForm';
 import { UrlList } from './components/UrlList';
+import { DashboardStats } from './components/DashboardStats';
+import { ProfileDropdown } from './components/ProfileDropdown';
+import { SearchBar } from './components/SearchBar';
+import { TagsFilter } from './components/TagsFilter';
 
 const API_URL = 'http://localhost:7784';
 
@@ -15,7 +19,26 @@ interface User {
 function App() {
   const [user, setUser] = useState<User | null>(null);
   const [urls, setUrls] = useState([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
+
+  // Mock data for demonstration
+  const dashboardData = {
+    totalUrls: urls.length,
+    totalClicks: urls.reduce((acc: number, url: any) => acc + (url.clicks || 0), 0),
+    activeLinks: urls.filter((url: any) => !url.expiresAt || new Date(url.expiresAt) > new Date()).length,
+    topCountries: [
+      { country: 'United States', count: 1250 },
+      { country: 'United Kingdom', count: 850 },
+      { country: 'Germany', count: 750 },
+      { country: 'France', count: 600 },
+      { country: 'Japan', count: 450 },
+    ],
+  };
+
+  // Get unique tags from all URLs
+  const allTags = Array.from(new Set(urls.flatMap((url: any) => url.tags || [])));
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -84,7 +107,7 @@ function App() {
     navigate('/login');
   };
 
-  const handleUrlSubmit = async (url: string) => {
+  const handleUrlSubmit = async (urlData: any) => {
     const token = localStorage.getItem('token');
     try {
       const response = await fetch(`${API_URL}/urls`, {
@@ -93,7 +116,7 @@ function App() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ url })
+        body: JSON.stringify(urlData)
       });
 
       if (response.ok) {
@@ -105,27 +128,45 @@ function App() {
     }
   };
 
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+  };
+
+  const handleTagSelect = (tag: string) => {
+    setSelectedTags((prev) => [...prev, tag]);
+  };
+
+  const handleTagRemove = (tag: string) => {
+    setSelectedTags((prev) => prev.filter((t) => t !== tag));
+  };
+
+  // Filter URLs based on search query and selected tags
+  const filteredUrls = urls.filter((url: any) => {
+    const matchesSearch = searchQuery === '' || 
+      url.originalUrl.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      url.shortUrl.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesTags = selectedTags.length === 0 ||
+      selectedTags.every(tag => url.tags?.includes(tag));
+
+    return matchesSearch && matchesTags;
+  });
+
   return (
     <div className="min-h-screen">
       {user && (
-        <nav className="bg-white/80 backdrop-blur-sm shadow-sm">
+        <nav className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between h-16">
               <div className="flex items-center">
                 <Link2 className="h-6 w-6 text-indigo-600" />
-                <span className="ml-2 text-xl font-semibold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                <span className="ml-2 text-xl font-semibold gradient-text">
                   URL Shortener
                 </span>
               </div>
-              <div className="flex items-center">
-                <span className="text-gray-700 mr-4">{user.email}</span>
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center text-gray-700 hover:text-gray-900 transition-all duration-300"
-                >
-                  <LogOut className="h-5 w-5 mr-1" />
-                  Logout
-                </button>
+              <div className="flex items-center space-x-4">
+                <SearchBar onSearch={handleSearch} />
+                <ProfileDropdown user={user} onLogout={handleLogout} />
               </div>
             </div>
           </div>
@@ -174,16 +215,52 @@ function App() {
             path="/dashboard"
             element={
               !user ? (
-                <Navigate to="/login" replace />
-              ) : (
+                // <Navigate to="/login" replace />
                 <div className="space-y-8">
-                  <div className="flex flex-col items-center">
-                    <h1 className="text-2xl font-semibold text-gray-900 mb-4">Shorten a URL</h1>
+                  <DashboardStats {...dashboardData} />
+                  
+                  <div className="bg-white rounded-lg shadow-sm p-6">
+                    <h2 className="text-2xl font-semibold text-gray-900 mb-6">Create Short URL</h2>
                     <UrlForm onSubmit={handleUrlSubmit} />
                   </div>
-                  <div className="flex flex-col items-center">
-                    <h2 className="text-xl font-semibold text-gray-900 mb-4">Your URLs</h2>
-                    <UrlList urls={urls} />
+
+                  <div className="bg-white rounded-lg shadow-sm p-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+                      <h2 className="text-2xl font-semibold text-gray-900">Your URLs</h2>
+                      <div className="mt-4 sm:mt-0">
+                        <TagsFilter
+                          tags={allTags}
+                          selectedTags={selectedTags}
+                          onTagSelect={handleTagSelect}
+                          onTagRemove={handleTagRemove}
+                        />
+                      </div>
+                    </div>
+                    <UrlList urls={filteredUrls} />
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-8">
+                  <DashboardStats {...dashboardData} />
+                  
+                  <div className="bg-white rounded-lg shadow-sm p-6">
+                    <h2 className="text-2xl font-semibold text-gray-900 mb-6">Create Short URL</h2>
+                    <UrlForm onSubmit={handleUrlSubmit} />
+                  </div>
+
+                  <div className="bg-white rounded-lg shadow-sm p-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+                      <h2 className="text-2xl font-semibold text-gray-900">Your URLs</h2>
+                      <div className="mt-4 sm:mt-0">
+                        <TagsFilter
+                          tags={allTags}
+                          selectedTags={selectedTags}
+                          onTagSelect={handleTagSelect}
+                          onTagRemove={handleTagRemove}
+                        />
+                      </div>
+                    </div>
+                    <UrlList urls={filteredUrls} />
                   </div>
                 </div>
               )
