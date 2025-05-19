@@ -1,24 +1,32 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState, useEffect } from 'react';
-import { Link, Route, Routes, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { Link2, Menu } from 'lucide-react';
-import { AuthForm } from './components/AuthForm';
-import { UrlForm } from './components/UrlForm';
-import { UrlList } from './components/UrlList';
-import { DashboardStats } from './components/DashboardStats';
-import { ProfileDropdown } from './components/ProfileDropdown';
-import { SearchBar } from './components/SearchBar';
-import { TagsFilter } from './components/TagsFilter';
-import { Sidebar } from './components/Sidebar';
-import { AnalyticsPage } from './pages/AnalyticsPage';
-import { HistoryPage } from './pages/HistoryPage';
-import { TagsPage } from './pages/TagsPage';
-import { TeamPage } from './pages/TeamPage';
-import { SettingsPage } from './pages/SettingsPage';
-import { UrlsPage } from './pages/UrlsPage';
-import { ProfilePage } from './pages/ProfilePage';
+import React, { useState, useEffect } from "react";
+import {
+  Link,
+  Route,
+  Routes,
+  Navigate,
+  useNavigate,
+  useLocation,
+} from "react-router-dom";
+import { Link2, Menu } from "lucide-react";
+import { AuthForm } from "./components/AuthForm";
+import { UrlForm } from "./components/UrlForm";
+import { UrlList } from "./components/UrlList";
+import { DashboardStats } from "./components/DashboardStats";
+import { ProfileDropdown } from "./components/ProfileDropdown";
+import { SearchBar } from "./components/SearchBar";
+import { TagsFilter } from "./components/TagsFilter";
+import { Sidebar } from "./components/Sidebar";
+import { AnalyticsPage } from "./pages/AnalyticsPage";
+import { HistoryPage } from "./pages/HistoryPage";
+import { TagsPage } from "./pages/TagsPage";
+import { TeamPage } from "./pages/TeamPage";
+import { SettingsPage } from "./pages/SettingsPage";
+import { UrlsPage } from "./pages/UrlsPage";
+import { ProfilePage } from "./pages/ProfilePage";
+import PrivateRoute from "./components/PrivateRoute";
 
-const API_URL = 'http://localhost:7784/api';
+const API_URL = "http://localhost:7784/api";
 
 interface User {
   id: string;
@@ -30,24 +38,24 @@ function App() {
   const [user, setUser] = useState<User | null>(null);
   const [urls, setUrls] = useState([
     {
-      _id: 'mock-id-1',
-      user: '64f47b2c9a0b4f1d2c1a2e3f',
-      originalUrl: 'https://example.com/product',
-      shortCode: 'exmpl123',
-      title: 'Example Product Page',
-      description: 'This is a sample product page used for demo purposes.',
+      _id: "mock-id-1",
+      user: "64f47b2c9a0b4f1d2c1a2e3f",
+      originalUrl: "https://example.com/product",
+      shortCode: "exmpl123",
+      title: "Example Product Page",
+      description: "This is a sample product page used for demo purposes.",
       password: null,
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
-      tags: ['demo', 'product', 'sale'],
-      category: 'ecommerce',
+      tags: ["demo", "product", "sale"],
+      category: "ecommerce",
       metadata: {
         category: {
-          category: 'ecommerce',
+          category: "ecommerce",
           confidence: 0.87,
-          subcategories: ['online shopping', 'retail']
+          subcategories: ["online shopping", "retail"],
         },
-        suggestions: ['electronics', 'trending'],
-        autoTags: ['bestseller', 'discount']
+        suggestions: ["electronics", "trending"],
+        autoTags: ["bestseller", "discount"],
       },
       team: null,
       isPublic: true,
@@ -56,58 +64,67 @@ function App() {
       updatedAt: new Date(),
     },
     {
-      _id: 'mock-id-2',
-      user: '64f47b2c9a0b4f1d2c1a2e3f',
-      originalUrl: 'https://openai.com/research',
-      shortCode: 'openai42',
-      title: 'OpenAI Research',
-      description: 'AI research and discoveries from OpenAI.',
+      _id: "mock-id-2",
+      user: "64f47b2c9a0b4f1d2c1a2e3f",
+      originalUrl: "https://openai.com/research",
+      shortCode: "openai42",
+      title: "OpenAI Research",
+      description: "AI research and discoveries from OpenAI.",
       password: null,
       expiresAt: null,
-      tags: ['ai', 'ml', 'research'],
-      category: 'technology',
+      tags: ["ai", "ml", "research"],
+      category: "technology",
       metadata: {
         category: {
-          category: 'technology',
+          category: "technology",
           confidence: 0.95,
-          subcategories: ['artificial intelligence', 'machine learning']
+          subcategories: ["artificial intelligence", "machine learning"],
         },
-        suggestions: ['future', 'innovation'],
-        autoTags: ['gpt', 'transformer']
+        suggestions: ["future", "innovation"],
+        autoTags: ["gpt", "transformer"],
       },
-      team: '65a91b2cdfe12a0bb22c3321',
+      team: "65a91b2cdfe12a0bb22c3321",
       isPublic: false,
       clickCount: 456,
       createdAt: new Date(),
       updatedAt: new Date(),
-    }
+    },
   ]);
-  
+
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [topCountries, setTopCountries] = useState<{ country: string; count: number }[]>([]);
+  const [topCountries, setTopCountries] = useState<
+    { country: string; count: number }[]
+  >([]);
 
   const navigate = useNavigate();
 
   const dashboardData = {
     totalUrls: urls.length,
-    totalClicks: urls.reduce((acc: number, url: any) => acc + (url.clicks || 0), 0),
-    activeLinks: urls.filter((url: any) => !url.expiresAt || new Date(url.expiresAt) > new Date()).length,
+    totalClicks: urls.reduce(
+      (acc: number, url: any) => acc + (url.clicks || 0),
+      0
+    ),
+    activeLinks: urls.filter(
+      (url: any) => !url.expiresAt || new Date(url.expiresAt) > new Date()
+    ).length,
 
     topCountries: [
-      { country: 'United States', count: 1250 },
-      { country: 'United Kingdom', count: 850 },
-      { country: 'Germany', count: 750 },
-      { country: 'France', count: 600 },
-      { country: 'Japan', count: 450 },
+      { country: "United States", count: 1250 },
+      { country: "United Kingdom", count: 850 },
+      { country: "Germany", count: 750 },
+      { country: "France", count: 600 },
+      { country: "Japan", count: 450 },
     ],
   };
 
-  const allTags = Array.from(new Set(urls.flatMap((url: any) => url.tags || [])));
+  const allTags = Array.from(
+    new Set(urls.flatMap((url: any) => url.tags || []))
+  );
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     if (token) {
       fetchUser(token);
     }
@@ -117,8 +134,8 @@ function App() {
     try {
       const response = await fetch(`${API_URL}/auth/me`, {
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          Authorization: `Bearer ${token}`,
+        },
       });
       if (response.ok) {
         const userData = await response.json();
@@ -126,7 +143,7 @@ function App() {
         fetchUrls(token);
       }
     } catch (error) {
-      console.error('Error fetching user:', error);
+      console.error("Error fetching user:", error);
     }
   };
 
@@ -134,57 +151,60 @@ function App() {
     try {
       const response = await fetch(`${API_URL}/urls`, {
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       if (response.ok) {
         const urlData = await response.json();
-        console.log(urlData.data)
+        console.log(urlData.data);
         setUrls(urlData.data);
       }
     } catch (error) {
-      console.error('Error fetching URLs:', error);
+      console.error("Error fetching URLs:", error);
     }
   };
 
   const handleAuth = async (email: string, password: string, name?: string) => {
     try {
-      const response = await fetch(`${API_URL}/${name ? 'auth/register' : 'auth/login'}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ email, password, name })
-      });
+      const response = await fetch(
+        `${API_URL}/${name ? "auth/register" : "auth/login"}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email, password, name }),
+        }
+      );
 
       if (response.ok) {
         const { token } = await response.json();
-        localStorage.setItem('token', token);
+        localStorage.setItem("token", token);
         await fetchUser(token);
-        navigate('/dashboard');
+        navigate("/dashboard");
       }
     } catch (error) {
-      console.error('Authentication error:', error);
+      console.error("Authentication error:", error);
     }
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
+    localStorage.removeItem("token");
     setUser(null);
-    navigate('/login');
-  }; 
+    navigate("/login");
+  };
 
   const handleUrlSubmit = async (urlData: any) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     try {
       const response = await fetch(`${API_URL}/urls`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(urlData)
+        body: JSON.stringify(urlData),
       });
 
       if (response.ok) {
@@ -192,7 +212,7 @@ function App() {
         setUrls((prev) => [newUrl, ...prev]);
       }
     } catch (error) {
-      console.error('Error creating short URL:', error);
+      console.error("Error creating short URL:", error);
     }
   };
 
@@ -209,12 +229,14 @@ function App() {
   };
 
   const filteredUrls = urls.filter((url: any) => {
-    const matchesSearch = searchQuery === '' || 
+    const matchesSearch =
+      searchQuery === "" ||
       url.originalUrl.toLowerCase().includes(searchQuery.toLowerCase()) ||
       url.shortUrl.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesTags = selectedTags.length === 0 ||
-      selectedTags.every(tag => url.tags?.includes(tag));
+
+    const matchesTags =
+      selectedTags.length === 0 ||
+      selectedTags.every((tag) => url.tags?.includes(tag));
 
     return matchesSearch && matchesTags;
   });
@@ -238,7 +260,7 @@ function App() {
                   </div>
                   <div className="flex items-center flex-1 justify-end space-x-4">
                     <SearchBar onSearch={handleSearch} />
-                    
+
                     <ProfileDropdown user={user} onLogout={handleLogout} />
                   </div>
                 </div>
@@ -250,36 +272,92 @@ function App() {
                 <Route
                   path="/dashboard"
                   element={
-                    <div className="space-y-8">
-                      <DashboardStats {...dashboardData} />
-                      <div className="bg-white rounded-lg shadow-sm p-6">
-                        <h2 className="text-2xl font-semibold text-gray-900 mb-6">Create Short URL</h2>
-                        <UrlForm onSubmit={handleUrlSubmit} />
-                      </div>
-                      <div className="bg-white rounded-lg shadow-sm p-6">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
-                          <h2 className="text-2xl font-semibold text-gray-900">Your URLs</h2>
-                          <div className="mt-4 sm:mt-0">
-                            <TagsFilter
-                              tags={allTags}
-                              selectedTags={selectedTags}
-                              onTagSelect={handleTagSelect}
-                              onTagRemove={handleTagRemove}
-                            />
-                          </div>
+                    <PrivateRoute user={user}>
+                      <div className="space-y-8">
+                        <DashboardStats {...dashboardData} />
+                        <div className="bg-white rounded-lg shadow-sm p-6">
+                          <h2 className="text-2xl font-semibold text-gray-900 mb-6">
+                            Create Short URL
+                          </h2>
+                          <UrlForm onSubmit={handleUrlSubmit} />
                         </div>
-                        <UrlList urls={filteredUrls} />
+                        <div className="bg-white rounded-lg shadow-sm p-6">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+                            <h2 className="text-2xl font-semibold text-gray-900">
+                              Your URLs
+                            </h2>
+                            <div className="mt-4 sm:mt-0">
+                              <TagsFilter
+                                tags={allTags}
+                                selectedTags={selectedTags}
+                                onTagSelect={handleTagSelect}
+                                onTagRemove={handleTagRemove}
+                              />
+                            </div>
+                          </div>
+                          <UrlList urls={filteredUrls} />
+                        </div>
                       </div>
-                    </div>
+                    </PrivateRoute>
                   }
                 />
-                <Route path="/analytics" element={<AnalyticsPage />} />
-                <Route path="/history" element={<HistoryPage />} />
-                <Route path="/tags" element={<TagsPage />} />
-                <Route path="/team" element={<TeamPage />} />
-                <Route path="/settings" element={<SettingsPage />} />
-                <Route path="/urls" element={<UrlsPage />} />
-                <Route path="/profile" element={<ProfilePage />} />
+
+                <Route
+                  path="/analytics"
+                  element={
+                    <PrivateRoute user={user}>
+                      <AnalyticsPage />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/history"
+                  element={
+                    <PrivateRoute user={user}>
+                      <HistoryPage />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/tags"
+                  element={
+                    <PrivateRoute user={user}>
+                      <TagsPage />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/team"
+                  element={
+                    <PrivateRoute user={user}>
+                      <TeamPage />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/settings"
+                  element={
+                    <PrivateRoute user={user}>
+                      <SettingsPage />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/profile"
+                  element={
+                    <PrivateRoute user={user}>
+                      <ProfilePage />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/urls"
+                  element={
+                    <PrivateRoute user={user}>
+                      <UrlsPage />
+                    </PrivateRoute>
+                  }
+                />
               </Routes>
             </main>
           </div>
@@ -292,10 +370,16 @@ function App() {
             path="/login"
             element={
               <div className="flex flex-col items-center justify-center min-h-[80vh]">
-                <AuthForm onSubmit={(email, password) => handleAuth(email, password)} type="login" />
+                <AuthForm
+                  onSubmit={(email, password) => handleAuth(email, password)}
+                  type="login"
+                />
                 <p className="mt-6 text-gray-600">
-                  Don't have an account?{' '}
-                  <Link to="/register" className="text-indigo-600 hover:text-indigo-800 font-medium transition-colors duration-300">
+                  Don't have an account?{" "}
+                  <Link
+                    to="/register"
+                    className="text-indigo-600 hover:text-indigo-800 font-medium transition-colors duration-300"
+                  >
                     Sign up
                   </Link>
                 </p>
@@ -306,10 +390,18 @@ function App() {
             path="/register"
             element={
               <div className="flex flex-col items-center justify-center min-h-[80vh]">
-                <AuthForm onSubmit={(email, password, name) => handleAuth(email, password, name)} type="register" />
+                <AuthForm
+                  onSubmit={(email, password, name) =>
+                    handleAuth(email, password, name)
+                  }
+                  type="register"
+                />
                 <p className="mt-6 text-gray-600">
-                  Already have an account?{' '}
-                  <Link to="/login" className="text-indigo-600 hover:text-indigo-800 font-medium transition-colors duration-300">
+                  Already have an account?{" "}
+                  <Link
+                    to="/login"
+                    className="text-indigo-600 hover:text-indigo-800 font-medium transition-colors duration-300"
+                  >
                     Sign in
                   </Link>
                 </p>
