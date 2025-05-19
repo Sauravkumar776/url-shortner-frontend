@@ -1,21 +1,110 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
-import { Link, Route, Routes, Navigate, useNavigate } from 'react-router-dom';
-import { Link2, LogOut } from 'lucide-react';
+import { Link, Route, Routes, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { Link2, Menu } from 'lucide-react';
 import { AuthForm } from './components/AuthForm';
 import { UrlForm } from './components/UrlForm';
 import { UrlList } from './components/UrlList';
+import { DashboardStats } from './components/DashboardStats';
+import { ProfileDropdown } from './components/ProfileDropdown';
+import { SearchBar } from './components/SearchBar';
+import { TagsFilter } from './components/TagsFilter';
+import { Sidebar } from './components/Sidebar';
+import { AnalyticsPage } from './pages/AnalyticsPage';
+import { HistoryPage } from './pages/HistoryPage';
+import { TagsPage } from './pages/TagsPage';
+import { TeamPage } from './pages/TeamPage';
+import { SettingsPage } from './pages/SettingsPage';
+import { UrlsPage } from './pages/UrlsPage';
+import { ProfilePage } from './pages/ProfilePage';
 
-const API_URL = 'http://localhost:7784';
+const API_URL = 'http://localhost:7784/api';
 
 interface User {
   id: string;
   email: string;
+  name?: string;
 }
 
 function App() {
   const [user, setUser] = useState<User | null>(null);
-  const [urls, setUrls] = useState([]);
+  const [urls, setUrls] = useState([
+    {
+      _id: 'mock-id-1',
+      user: '64f47b2c9a0b4f1d2c1a2e3f',
+      originalUrl: 'https://example.com/product',
+      shortCode: 'exmpl123',
+      title: 'Example Product Page',
+      description: 'This is a sample product page used for demo purposes.',
+      password: null,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+      tags: ['demo', 'product', 'sale'],
+      category: 'ecommerce',
+      metadata: {
+        category: {
+          category: 'ecommerce',
+          confidence: 0.87,
+          subcategories: ['online shopping', 'retail']
+        },
+        suggestions: ['electronics', 'trending'],
+        autoTags: ['bestseller', 'discount']
+      },
+      team: null,
+      isPublic: true,
+      clickCount: 123,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    {
+      _id: 'mock-id-2',
+      user: '64f47b2c9a0b4f1d2c1a2e3f',
+      originalUrl: 'https://openai.com/research',
+      shortCode: 'openai42',
+      title: 'OpenAI Research',
+      description: 'AI research and discoveries from OpenAI.',
+      password: null,
+      expiresAt: null,
+      tags: ['ai', 'ml', 'research'],
+      category: 'technology',
+      metadata: {
+        category: {
+          category: 'technology',
+          confidence: 0.95,
+          subcategories: ['artificial intelligence', 'machine learning']
+        },
+        suggestions: ['future', 'innovation'],
+        autoTags: ['gpt', 'transformer']
+      },
+      team: '65a91b2cdfe12a0bb22c3321',
+      isPublic: false,
+      clickCount: 456,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+  ]);
+  
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [topCountries, setTopCountries] = useState<{ country: string; count: number }[]>([]);
+
   const navigate = useNavigate();
+
+  const dashboardData = {
+    totalUrls: urls.length,
+    totalClicks: urls.reduce((acc: number, url: any) => acc + (url.clicks || 0), 0),
+    activeLinks: urls.filter((url: any) => !url.expiresAt || new Date(url.expiresAt) > new Date()).length,
+
+    topCountries: [
+      { country: 'United States', count: 1250 },
+      { country: 'United Kingdom', count: 850 },
+      { country: 'Germany', count: 750 },
+      { country: 'France', count: 600 },
+      { country: 'Japan', count: 450 },
+    ],
+  };
+
+  const allTags = Array.from(new Set(urls.flatMap((url: any) => url.tags || [])));
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -26,14 +115,14 @@ function App() {
 
   const fetchUser = async (token: string) => {
     try {
-      const response = await fetch(`${API_URL}/user`, {
+      const response = await fetch(`${API_URL}/auth/me`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
       if (response.ok) {
         const userData = await response.json();
-        setUser(userData);
+        setUser(userData.user);
         fetchUrls(token);
       }
     } catch (error) {
@@ -48,23 +137,25 @@ function App() {
           'Authorization': `Bearer ${token}`
         }
       });
+
       if (response.ok) {
         const urlData = await response.json();
-        setUrls(urlData);
+        console.log(urlData.data)
+        setUrls(urlData.data);
       }
     } catch (error) {
       console.error('Error fetching URLs:', error);
     }
   };
 
-  const handleAuth = async (email: string, password: string, isLogin: boolean) => {
+  const handleAuth = async (email: string, password: string, name?: string) => {
     try {
-      const response = await fetch(`${API_URL}/${isLogin ? 'login' : 'register'}`, {
+      const response = await fetch(`${API_URL}/${name ? 'auth/register' : 'auth/login'}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email, password, name })
       });
 
       if (response.ok) {
@@ -82,9 +173,9 @@ function App() {
     localStorage.removeItem('token');
     setUser(null);
     navigate('/login');
-  };
+  }; 
 
-  const handleUrlSubmit = async (url: string) => {
+  const handleUrlSubmit = async (urlData: any) => {
     const token = localStorage.getItem('token');
     try {
       const response = await fetch(`${API_URL}/urls`, {
@@ -93,7 +184,7 @@ function App() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ url })
+        body: JSON.stringify(urlData)
       });
 
       if (response.ok) {
@@ -105,93 +196,129 @@ function App() {
     }
   };
 
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+  };
+
+  const handleTagSelect = (tag: string) => {
+    setSelectedTags((prev) => [...prev, tag]);
+  };
+
+  const handleTagRemove = (tag: string) => {
+    setSelectedTags((prev) => prev.filter((t) => t !== tag));
+  };
+
+  const filteredUrls = urls.filter((url: any) => {
+    const matchesSearch = searchQuery === '' || 
+      url.originalUrl.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      url.shortUrl.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesTags = selectedTags.length === 0 ||
+      selectedTags.every(tag => url.tags?.includes(tag));
+
+    return matchesSearch && matchesTags;
+  });
+
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-gray-50">
       {user && (
-        <nav className="bg-white/80 backdrop-blur-sm shadow-sm">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between h-16">
-              <div className="flex items-center">
-                <Link2 className="h-6 w-6 text-indigo-600" />
-                <span className="ml-2 text-xl font-semibold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                  URL Shortener
-                </span>
+        <>
+          <Sidebar />
+          <div className="lg:pl-64">
+            <nav className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-50">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="flex justify-between h-16">
+                  <div className="flex items-center lg:hidden">
+                    <button
+                      onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                      className="text-gray-500 hover:text-gray-600"
+                    >
+                      <Menu className="h-6 w-6" />
+                    </button>
+                  </div>
+                  <div className="flex items-center flex-1 justify-end space-x-4">
+                    <SearchBar onSearch={handleSearch} />
+                    
+                    <ProfileDropdown user={user} onLogout={handleLogout} />
+                  </div>
+                </div>
               </div>
-              <div className="flex items-center">
-                <span className="text-gray-700 mr-4">{user.email}</span>
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center text-gray-700 hover:text-gray-900 transition-all duration-300"
-                >
-                  <LogOut className="h-5 w-5 mr-1" />
-                  Logout
-                </button>
-              </div>
-            </div>
+            </nav>
+
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+              <Routes>
+                <Route
+                  path="/dashboard"
+                  element={
+                    <div className="space-y-8">
+                      <DashboardStats {...dashboardData} />
+                      <div className="bg-white rounded-lg shadow-sm p-6">
+                        <h2 className="text-2xl font-semibold text-gray-900 mb-6">Create Short URL</h2>
+                        <UrlForm onSubmit={handleUrlSubmit} />
+                      </div>
+                      <div className="bg-white rounded-lg shadow-sm p-6">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+                          <h2 className="text-2xl font-semibold text-gray-900">Your URLs</h2>
+                          <div className="mt-4 sm:mt-0">
+                            <TagsFilter
+                              tags={allTags}
+                              selectedTags={selectedTags}
+                              onTagSelect={handleTagSelect}
+                              onTagRemove={handleTagRemove}
+                            />
+                          </div>
+                        </div>
+                        <UrlList urls={filteredUrls} />
+                      </div>
+                    </div>
+                  }
+                />
+                <Route path="/analytics" element={<AnalyticsPage />} />
+                <Route path="/history" element={<HistoryPage />} />
+                <Route path="/tags" element={<TagsPage />} />
+                <Route path="/team" element={<TeamPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/urls" element={<UrlsPage />} />
+                <Route path="/profile" element={<ProfilePage />} />
+              </Routes>
+            </main>
           </div>
-        </nav>
+        </>
       )}
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {!user && (
         <Routes>
           <Route
             path="/login"
             element={
-              user ? (
-                <Navigate to="/dashboard" replace />
-              ) : (
-                <div className="flex flex-col items-center justify-center min-h-[80vh]">
-                  <AuthForm onSubmit={(email, password) => handleAuth(email, password, true)} type="login" />
-                  <p className="mt-6 text-gray-600">
-                    Don't have an account?{' '}
-                    <Link to="/register" className="text-indigo-600 hover:text-indigo-800 font-medium transition-colors duration-300">
-                      Sign up
-                    </Link>
-                  </p>
-                </div>
-              )
+              <div className="flex flex-col items-center justify-center min-h-[80vh]">
+                <AuthForm onSubmit={(email, password) => handleAuth(email, password)} type="login" />
+                <p className="mt-6 text-gray-600">
+                  Don't have an account?{' '}
+                  <Link to="/register" className="text-indigo-600 hover:text-indigo-800 font-medium transition-colors duration-300">
+                    Sign up
+                  </Link>
+                </p>
+              </div>
             }
           />
           <Route
             path="/register"
             element={
-              user ? (
-                <Navigate to="/dashboard" replace />
-              ) : (
-                <div className="flex flex-col items-center justify-center min-h-[80vh]">
-                  <AuthForm onSubmit={(email, password) => handleAuth(email, password, false)} type="register" />
-                  <p className="mt-6 text-gray-600">
-                    Already have an account?{' '}
-                    <Link to="/login" className="text-indigo-600 hover:text-indigo-800 font-medium transition-colors duration-300">
-                      Sign in
-                    </Link>
-                  </p>
-                </div>
-              )
+              <div className="flex flex-col items-center justify-center min-h-[80vh]">
+                <AuthForm onSubmit={(email, password, name) => handleAuth(email, password, name)} type="register" />
+                <p className="mt-6 text-gray-600">
+                  Already have an account?{' '}
+                  <Link to="/login" className="text-indigo-600 hover:text-indigo-800 font-medium transition-colors duration-300">
+                    Sign in
+                  </Link>
+                </p>
+              </div>
             }
           />
-          <Route
-            path="/dashboard"
-            element={
-              !user ? (
-                <Navigate to="/login" replace />
-              ) : (
-                <div className="space-y-8">
-                  <div className="flex flex-col items-center">
-                    <h1 className="text-2xl font-semibold text-gray-900 mb-4">Shorten a URL</h1>
-                    <UrlForm onSubmit={handleUrlSubmit} />
-                  </div>
-                  <div className="flex flex-col items-center">
-                    <h2 className="text-xl font-semibold text-gray-900 mb-4">Your URLs</h2>
-                    <UrlList urls={urls} />
-                  </div>
-                </div>
-              )
-            }
-          />
-          <Route path="/" element={<Navigate to={user ? "/dashboard" : "/login"} replace />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
-      </main>
+      )}
     </div>
   );
 }
