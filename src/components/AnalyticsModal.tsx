@@ -1,4 +1,6 @@
-import React from 'react';
+// src/components/AnalyticsModal.tsx
+import React, { useEffect, useState } from 'react';
+import { get } from '../utils/api';
 import {
   BarChart,
   Bar,
@@ -18,26 +20,48 @@ interface Analytics {
   locations: { country: string; count: number }[];
 }
 
-interface Url {
+interface TopUrl {
   id: string;
+  shortCode: string;
+  originalUrl: string;
   shortUrl: string;
-  clicks: number;
-  analytics: Analytics;
+  title: string;
+  clickCount: number;
+  analytics?: Analytics | undefined | null; // Make analytics optional here
 }
 
 interface AnalyticsModalProps {
-  url: Url;
+  url: TopUrl;
   onClose: () => void;
 }
 
 const COLORS = ['#4F46E5', '#7C3AED', '#EC4899', '#F59E0B', '#10B981'];
 
 export function AnalyticsModal({ url, onClose }: AnalyticsModalProps) {
+  const [analytics, setAnalytics] = useState<Analytics | null>(url.analytics);
+
+  useEffect(() => {
+    if (!url.analytics) {
+      const fetchAnalytics = async () => {
+        try {
+          const res = await get(`/urls/${url.id}/analytics`);
+          setAnalytics(res.data);
+        } catch (err) {
+          console.error('Error fetching URL analytics:', err);
+        }
+      };
+
+      fetchAnalytics();
+    }
+  }, [url]);
+
+  if (!analytics) return <div>Loading...</div>;
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-xl font-semibold">Analytics for {new URL(url.shortUrl).pathname.slice(1)}</h3>
+          <h3 className="text-xl font-semibold">Analytics for {new URL(url.shortCode).pathname.slice(1)}</h3>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 text-2xl"
@@ -54,7 +78,7 @@ export function AnalyticsModal({ url, onClose }: AnalyticsModalProps) {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={url.analytics.browsers}
+                    data={analytics.browsers}
                     dataKey="count"
                     nameKey="name"
                     cx="50%"
@@ -62,7 +86,7 @@ export function AnalyticsModal({ url, onClose }: AnalyticsModalProps) {
                     outerRadius={80}
                     label
                   >
-                    {url.analytics.browsers.map((entry, index) => (
+                    {analytics.browsers.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
@@ -77,7 +101,7 @@ export function AnalyticsModal({ url, onClose }: AnalyticsModalProps) {
             <h4 className="text-lg font-medium mb-4">Devices</h4>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={url.analytics.devices}>
+                <BarChart data={analytics.devices}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="type" />
                   <YAxis />
@@ -93,7 +117,7 @@ export function AnalyticsModal({ url, onClose }: AnalyticsModalProps) {
             <h4 className="text-lg font-medium mb-4">Locations</h4>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={url.analytics.locations}>
+                <BarChart data={analytics.locations}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="country" />
                   <YAxis />

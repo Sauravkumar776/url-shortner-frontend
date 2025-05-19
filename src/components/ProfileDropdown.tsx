@@ -6,7 +6,7 @@ interface ProfileDropdownProps {
   user: {
     email: string;
     name?: string;
-  };
+  } | null;
   onLogout: () => void;
 }
 
@@ -32,13 +32,13 @@ export function ProfileDropdown({ user, onLogout }: ProfileDropdownProps) {
         className="flex items-center space-x-3 hover:bg-gray-50 rounded-full py-2 px-3 transition-colors duration-200"
       >
         <div className="w-8 h-8 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center text-white font-medium">
-          {user.name ? user.name[0].toUpperCase() : user.email[0].toUpperCase()}
+          {user?.name ? user?.name[0].toUpperCase() : user?.email[0].toUpperCase()}
         </div>
         <div className="text-left hidden sm:block">
           <p className="text-sm font-medium text-gray-700">
-            {user.name || user.email.split('@')[0]}
+            {user?.name || user?.email.split('@')[0]}
           </p>
-          <p className="text-xs text-gray-500">{user.email}</p>
+          <p className="text-xs text-gray-500">{user?.email}</p>
         </div>
       </button>
 
